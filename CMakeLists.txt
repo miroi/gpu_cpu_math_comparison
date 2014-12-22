@@ -6,7 +6,7 @@ cmake_policy(SET CMP0010 OLD)
 # do not rebuild if rules (compiler flags) change
 set(CMAKE_SKIP_RULE_DEPENDENCY TRUE)
 
-project(DIRAC Fortran C CXX)
+project(GPU-CPU-COMPARE Fortran C CXX)
 
 option(ENABLE_64BIT_INTEGERS  "Enable 64-bit integers"                                    OFF)
 option(ENABLE_MPI             "Enable MPI parallelization"                                OFF)
@@ -77,7 +77,7 @@ set(EXTERNAL_LIBS)
 include(ConfigVersion)
 include(ConfigArchitecture)
 include(ConfigPamadm)
-include(Sources) # this has to come before ConfigCompilerFlags
+#include(Sources) # this has to come before ConfigCompilerFlags
 include(ConfigCompilerFlags)
 include(ConfigDocumentation)
 include(ConfigExternal)
@@ -101,25 +101,10 @@ if(ENABLE_BUILTIN_LAPACK)
     add_definitions(-DUSE_BUILTIN_LAPACK)
 endif()
 
-add_custom_command(
-    OUTPUT
-    ${PROJECT_BINARY_DIR}/fortran_interface.h
-    DEPENDS
-    gen_fortran_interface_h
-    COMMAND
-    gen_fortran_interface_h > ${PROJECT_BINARY_DIR}/fortran_interface.h
-    )
-
-add_executable(
-    gen_fortran_interface_h
-    ${PROJECT_SOURCE_DIR}/utils/gen_fortran_interface_h.c
-    )
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/src/include
-    ${PROJECT_SOURCE_DIR}/src/cfun
     ${PROJECT_BINARY_DIR}/modules
-    ${PROJECT_BINARY_DIR}/src/xcfun/fortran
     ${PROJECT_BINARY_DIR}
     )
 
@@ -146,7 +131,7 @@ endif()
 
 
 set(GENERATED_FILES
-    ${PROJECT_BINARY_DIR}/fortran_interface.h
+    #${PROJECT_BINARY_DIR}/fortran_interface.h
     )
 add_custom_target(dirac_interfaces
     ALL
@@ -155,23 +140,13 @@ add_custom_target(dirac_interfaces
 )
 
 # set definitions
-include(Definitions)
+#include(Definitions)
 
-add_definitions(-DPRG_DIRAC)
-set(WORK_MEM_WORDS
-    "64000000"
-    CACHE STRING
-    "Work memory in words"
-    )
-add_definitions(-DINSTALL_WRKMEM=${WORK_MEM_WORDS})
 if(ENABLE_MATLAB_LOG)
     add_definitions(-DMOD_MATLAB_LOG)
 endif()
 if(ENABLE_64BIT_INTEGERS)
     add_definitions(-DINT_STAR8)
-endif()
-if(ENABLE_LAPACK_QDIAG)
-    add_definitions(-DLAPACK_QDIAG)
 endif()
 # forward CPP directly to the code
 set(CPP)
@@ -180,27 +155,34 @@ if(NOT "${CPP}" STREQUAL "")
 endif()
 
 # add binary_info.F90
-set(GENERATED_FILES
-    ${GENERATED_FILES}
-    ${CMAKE_BINARY_DIR}/binary_info.F90
-    )
+#set(GENERATED_FILES
+#    ${GENERATED_FILES}
+#    ${CMAKE_BINARY_DIR}/binary_info.F90
+#    )
 
-set(DIRAC_SOURCES
+set(FREE_FORTRAN_SOURCES
+    src/fortr_timing.F90
+    src/gpu_stuff.F90
+    src/utils.F90
+)
+
+set(C_SOURCES
+    src/gpu_routines.c
+)
+
+
+set(GPUCPU_SOURCES
     ${C_SOURCES}
     ${FREE_FORTRAN_SOURCES}
     ${FIXED_FORTRAN_SOURCES}
     )
 
 add_library(
-    dirac
-    ${DIRAC_SOURCES}
+    gpucpu
+    ${GPUCPU_SOURCES}
     ${GENERATED_FILES}
     )
 
-if(DEVELOPMENT_CODE)
-    add_dependencies(dirac run_pamadm)
-endif()
-add_dependencies(dirac generate_binary_info)
 
 set(LIST_OF_EXECUTABLES)
 macro(compile_standalone _executable _source LIST_OF_EXECUTABLES)
@@ -214,31 +196,7 @@ macro(compile_standalone _executable _source LIST_OF_EXECUTABLES)
         ${_executable}
     )
 endmacro()
-compile_standalone(dirac.x src/main/main.F90 "${LIST_OF_EXECUTABLES}")
-
-if(ENABLE_UTILITIES)
-    compile_standalone(dirac_mointegral_export.x utils/dirac_mointegral_export.F90 "${LIST_OF_EXECUTABLES}")
-    compile_standalone(rspread.x                 utils/rspread.F90                 "${LIST_OF_EXECUTABLES}")
-    compile_standalone(labread.x                 utils/labread.F90                 "${LIST_OF_EXECUTABLES}")
-    compile_standalone(twofit.x                  utils/twofit.F90                  "${LIST_OF_EXECUTABLES}")
-    compile_standalone(cfread.x                  utils/cfread.F90                  "${LIST_OF_EXECUTABLES}")
-    compile_standalone(vibcal.x                  utils/vibcal.F90                  "${LIST_OF_EXECUTABLES}")
-    compile_standalone(polfit.x                  utils/polfit.F90                  "${LIST_OF_EXECUTABLES}")
-    compile_standalone(mx2fit.x                  utils/mx2fit.F90                  "${LIST_OF_EXECUTABLES}")
-    compile_standalone(diag.x                    utils/diag.F90                    "${LIST_OF_EXECUTABLES}")
-    if(ENABLE_RELCCSD_STANDALONE)
-        compile_standalone(relccsd.x src/relccsd/ccmain.F "${LIST_OF_EXECUTABLES}")
-    endif()
-    if(ENABLE_HSCC) # note: this functionality depends on the pam flag
-        compile_standalone(hsmrcc.x src/cc_external/hsmrcc/hsmrmain.c "${LIST_OF_EXECUTABLES}")
-    endif()
-    if(ENABLE_HSFS) # note: this functionality depends on the pam flag
-        compile_standalone(hsfscc.x src/cc_external/hsfscc/hsfs_main.F90 "${LIST_OF_EXECUTABLES}")
-    endif()
-    if(ENABLE_MEM_TEST) #
-        compile_standalone(test_allocator.x utils/test_allocator.F90 "${LIST_OF_EXECUTABLES}")
-    endif()
-endif()
+compile_standalone(gpu-cpu-comparison.x  src/main.F90  "${LIST_OF_EXECUTABLES}")
 
 foreach(
     EXECUTABLE
@@ -252,12 +210,9 @@ foreach(
     endif()
     target_link_libraries(
         ${EXECUTABLE}
-        dirac
+        gpucpu
         ${EXTERNAL_LIBS}
         )
-    if(ENABLE_PCMSOLVER)
-        add_dependencies(${EXECUTABLE} pcmsolver)
-    endif()
 
     if(ENABLE_STATIC_LINKING)
         target_link_libraries(${EXECUTABLE} ${NODYNEXPORT})
@@ -275,27 +230,16 @@ foreach(
 
 endforeach()
 
-#miro: add stdc++ library at the very end to satisfy PGI compilers
-list(APPEND CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "stdc++")
-
 # give a nice message at the end
 include(Motivation)
 get_motivational_message(${DEVELOPMENT_CODE} msg)
 add_custom_target(final ALL COMMENT "Compilation successfully completed - ${msg}")
 set(_list_of_all_targets ${LIST_OF_EXECUTABLES})
-if(ENABLE_XCFUN)
-    set(_list_of_all_targets ${_list_of_all_targets} example_fortran funeval testall)
-endif()
 add_dependencies(final ${_list_of_all_targets})
 unset(_list_of_all_targets)
 
-#enable compilation of this standalone code with C main source file (TODO: adapt for Portland)
-if(ENABLE_HSCC AND CMAKE_Fortran_COMPILER_ID MATCHES Intel)
-    SET_TARGET_PROPERTIES(hsmrcc.x PROPERTIES LINK_FLAGS "-nofor-main")
-endif()
-
 include(ConfigTesting)
-include(ConfigPackaging)
+#include(ConfigPackaging)
 
 # give information about system, compiler flags, and size of static allocations ...
 set(STATIC_MEM_INFO_BINARIES dirac)

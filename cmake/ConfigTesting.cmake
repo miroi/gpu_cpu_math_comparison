@@ -25,6 +25,6 @@ if(RUN_UNIT_TESTS)
   include(ConfigUnitTesting)
 endif()
 
-include(Tests)
+#include(Tests)
 include(CTest)
 enable_testing()
