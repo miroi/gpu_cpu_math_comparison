@@ -21,7 +21,10 @@ option(ENABLE_SANITY_CHECKS   "Enable configure-time sanity checks"             
 option(ENABLE_CRAY_WRAPPERS   "Enable cray wrappers for BLAS/LAPACK and MPI"              OFF)
 option(ENABLE_BENCHMARKS      "Enable benchmarks within the test suite"                   OFF)
 option(ENABLE_TUTORIALS       "Enable tutorials within the test suite"                    OFF)
-
+#
+option(ENABLE_CULA            "Enable CULA library"                                       ON)
+option(ENABLE_CUDA            "Enable CUDA library"                                       ON)
+#
 option(ENABLE_BUILTIN_BLAS   "Enable builtin BLAS implementation (slow)"        OFF)
 option(ENABLE_AUTO_BLAS      "Enable CMake to autodetect BLAS"                  ON)
 option(ENABLE_BUILTIN_LAPACK "Enable builtin LAPACK implementation (slow)"      OFF)
@@ -81,7 +84,7 @@ include(ConfigPamadm)
 include(ConfigCompilerFlags)
 #include(ConfigDocumentation)
 include(ConfigExternal)
-include(ConfigGPU)
+#include(ConfigGPU)
 include(ConfigOMP)
 
 # math detection
@@ -183,60 +186,7 @@ add_library(
     ${GENERATED_FILES}
     )
 
-
-set(LIST_OF_EXECUTABLES)
-macro(compile_standalone _executable _source LIST_OF_EXECUTABLES)
-    add_executable(
-        ${_executable}
-        ${_source}
-    )
-    set_property(TARGET ${_executable} PROPERTY LINKER_LANGUAGE Fortran)
-    set(LIST_OF_EXECUTABLES
-        ${LIST_OF_EXECUTABLES}
-        ${_executable}
-    )
-endmacro()
-compile_standalone(gpu-cpu-comparison.x  src/main.F90  "${LIST_OF_EXECUTABLES}")
-
-foreach(
-    EXECUTABLE
-    ${LIST_OF_EXECUTABLES}
-    )
-    if(${CMAKE_SYSTEM_NAME} STREQUAL "AIX")
-        SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES LINK_FLAGS "-Wl,-bbigtoc")
-    endif()
-    if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-        SET_TARGET_PROPERTIES(${EXECUTABLE} PROPERTIES LINK_FLAGS "-Wl,-E")
-    endif()
-    target_link_libraries(
-        ${EXECUTABLE}
-        gpucpu
-        ${EXTERNAL_LIBS}
-        )
-
-    if(ENABLE_STATIC_LINKING)
-        target_link_libraries(${EXECUTABLE} ${NODYNEXPORT})
-        if (BLAS_TYPE MATCHES Atlas)
-            # activate extra linking flags for dirac.x only if this bug occurs, please do not delete
-            # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=30471#c7
-            # this bug is: signal 11 (SIGSEGV):Segmentation fault, function __restore_rt (0x1613DA0),from file sigaction.c
-            target_link_libraries(${EXECUTABLE} -Wl,--whole-archive -lpthread -Wl,--no-whole-archive)
-        endif()
-        if (BLAS_TYPE MATCHES MKL AND CMAKE_Fortran_COMPILER_ID MATCHES GNU)
-            # miro: GNU+MKL-static needs extra lib
-            target_link_libraries(${EXECUTABLE} -ldl)
-        endif()
-    endif()
-
-endforeach()
-
-# give a nice message at the end
-include(Motivation)
-get_motivational_message(${DEVELOPMENT_CODE} msg)
-add_custom_target(final ALL COMMENT "Compilation successfully completed - ${msg}")
-set(_list_of_all_targets ${LIST_OF_EXECUTABLES})
-add_dependencies(final ${_list_of_all_targets})
-unset(_list_of_all_targets)
+include(ConfigGPU)
 
 include(ConfigTesting)
 #include(ConfigPackaging)

@@ -1,6 +1,7 @@
 if(ENABLE_CUDA)
     find_package(CUDA)
     if(CUDA_FOUND)
+        add_definitions(-DCUBLAS_GFORTRAN)
         if(NOT ENABLE_64BIT_INTEGERS)
             # for CUDA we are employing variables set and returned by FindCUDA.cmake
             add_library(fortran_cuda "${CUDA_TOOLKIT_ROOT_DIR}/src/fortran.c" "${CUDA_TOOLKIT_ROOT_DIR}/src/fortran.h")
@@ -27,14 +28,16 @@ if(ENABLE_CUDA)
             if (CUDA_64_BIT_DEVICE_CODE)
                 add_definitions(-DARCH_64)
             endif()
+
             # fortran executable with some routines in C to check all GPU possibilities
-            add_executable(gpu_test.x utils/gpu_test.F90 utils/gpu_routines.c)
+            add_executable(gpu-cpu-comparison.x  src/main.F90  ${GPUCPU_SOURCES} )
+
             if (ENABLE_CULA) # both CUDA & CULA present
                 # "CULA is built on NVIDIA CUDAand NVIDIA CUBLAS", but it can also be linked against  newer CUDA libraries
                 # miro: we have two linking possibilities, explore them
-                target_link_libraries(gpu_test.x fortran_cuda ${EXTERNAL_LIBS} ${CULA} ${CULA_FORTRAN} ${CULA_BLAS} ${CULA_CUDART} blas lapack) # employ solely own stuff from CULA ...
+                target_link_libraries(gpu-cpu-comparison.x fortran_cuda ${EXTERNAL_LIBS} ${CULA} ${CULA_FORTRAN} ${CULA_BLAS} ${CULA_CUDART} blas lapack) # employ solely own stuff from CULA ...
             else() # linking against sole CUDA
-                target_link_libraries(gpu_test.x fortran_cuda ${EXTERNAL_LIBS} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES} blas)
+                target_link_libraries(gpu-cpu-comparison.x fortran_cuda ${EXTERNAL_LIBS} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES} blas)
             endif()
         else()
             message("-- CUDA library found, but can not be used with 64-bit integers!")
