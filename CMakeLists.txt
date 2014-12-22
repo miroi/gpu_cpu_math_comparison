@@ -79,7 +79,7 @@ include(ConfigArchitecture)
 include(ConfigPamadm)
 #include(Sources) # this has to come before ConfigCompilerFlags
 include(ConfigCompilerFlags)
-include(ConfigDocumentation)
+#include(ConfigDocumentation)
 include(ConfigExternal)
 include(ConfigGPU)
 include(ConfigOMP)
