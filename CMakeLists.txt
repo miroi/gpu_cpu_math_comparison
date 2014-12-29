@@ -19,8 +19,6 @@ option(ENABLE_OLD_LINKER      "Enable static linking with older linkers"        
 option(ENABLE_XHOST_FLAG_DETECTION "Enable xHost flag detection for Intel compilers"      OFF)
 option(ENABLE_SANITY_CHECKS   "Enable configure-time sanity checks"                       ON)
 option(ENABLE_CRAY_WRAPPERS   "Enable cray wrappers for BLAS/LAPACK and MPI"              OFF)
-option(ENABLE_BENCHMARKS      "Enable benchmarks within the test suite"                   OFF)
-option(ENABLE_TUTORIALS       "Enable tutorials within the test suite"                    OFF)
 #
 option(ENABLE_CULA            "Enable CULA library"                                       ON)
 option(ENABLE_CUDA            "Enable CUDA library"                                       ON)
@@ -81,7 +79,6 @@ include(ConfigVersion)
 include(ConfigArchitecture)
 include(ConfigPamadm)
 include(ConfigCompilerFlags)
-#include(ConfigDocumentation)
 include(ConfigExternal)
 include(ConfigOMP)
 
@@ -123,9 +120,6 @@ if (CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
     list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "cilkrts")
 endif()
 
-# set definitions
-#include(Definitions)
-
 if(ENABLE_64BIT_INTEGERS)
     add_definitions(-DINT_STAR8)
 endif()
@@ -142,13 +136,17 @@ if(ENABLE_CUDA)
       add_definitions(-DUSE_CUBLAS)
       message("CUDA_INCLUDE_DIRS=${CUDA_INCLUDE_DIRS}")
       message("CUDA_LIBRARIES=${CUDA_LIBRARIES}")
+    else()
+      message(FATAL "CUDA not found !")
     endif()
 endif()
 if(ENABLE_CULA)
     find_package(CULA)
     if(CUDA_FOUND)
       add_definitions(-DUSE_CULA)
-      message("CULA_LIBRARIES=${CULA_LIBRARIES}")
+      #message("CULA_LIBRARIES=${CULA_LIBRARIES}")
+    else()
+      message("CULA not found !")
     endif()
 endif()
 
@@ -185,17 +183,26 @@ add_library(
 
 add_library(fortran_cuda "${CUDA_TOOLKIT_ROOT_DIR}/src/fortran.c" "${CUDA_TOOLKIT_ROOT_DIR}/src/fortran.h")
 
+message("CUDA_CUBLAS_LIBRARIES=${CUDA_CUBLAS_LIBRARIES}")
+
+message("CULA_LIBRARY=${CULA_LIBRARY}")
+message("CULA_LAPACK_LIBRARY=${CULA_LAPACK_LIBRARY}")
+
 add_executable(gpu-cpu-comparison.x  src/main.F90 ${GPUCPU_SOURCES})
+CUDA_ADD_CUBLAS_TO_TARGET(gpu-cpu-comparison.x)
+
 #target_link_libraries(gpu-cpu-comparison.x gpucpu  fortran_cuda   ${CUDA_LIBRARIES}  blas lapack)
 #target_link_libraries(gpu-cpu-comparison.x gpucpu  fortran_cuda ${CUDA_LIBRARIES} ${CULA_LIBRARIES} blas lapack)
-target_link_libraries(gpu-cpu-comparison.x gpucpu  ${CUDA_LIBRARIES} ${CULA_LIBRARIES} blas lapack)
+#target_link_libraries(gpu-cpu-comparison.x gpucpu  ${CUDA_LIBRARIES} ${CULA_LIBRARIES} cublas blas lapack)
+#target_link_libraries(gpu-cpu-comparison.x  fortran_cuda ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES} ${CULA_LIBRARIES}  blas lapack)
+target_link_libraries(gpu-cpu-comparison.x fortran_cuda ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES} ${CULA_LIBRARIES} blas lapack)
 
 
 include(ConfigTesting)
 #include(ConfigPackaging)
 
 # give information about system, compiler flags, and size of static allocations ...
-set(STATIC_MEM_INFO_BINARIES dirac)
+#set(STATIC_MEM_INFO_BINARIES dirac)
 
 # info what blas and lapack will be used when its variable is not set
 if(NOT BLAS_LIBRARIES)

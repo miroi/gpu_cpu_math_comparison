@@ -20,7 +20,6 @@ integer ::   cublas_set_vector, cublas_get_vector, cublas_sgemm, cublas_sgemv,cu
 
 ! CULA specific library objects 
 #if USE_CULA
-!external  :: cula_initialize, cula_shutdown,cula_sgemv
 integer, external  :: cula_initialize, cula_shutdown,cula_sgemv, cula_dgemv
 integer, external  :: CULA_SGEQRF, cula_sgesv, cula_sgemm, cula_dgemm
 #endif
