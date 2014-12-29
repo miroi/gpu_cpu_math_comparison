@@ -80,11 +80,9 @@ set(EXTERNAL_LIBS)
 include(ConfigVersion)
 include(ConfigArchitecture)
 include(ConfigPamadm)
-#include(Sources) # this has to come before ConfigCompilerFlags
 include(ConfigCompilerFlags)
 #include(ConfigDocumentation)
 include(ConfigExternal)
-#include(ConfigGPU)
 include(ConfigOMP)
 
 # math detection
@@ -103,13 +101,6 @@ endif()
 if(ENABLE_BUILTIN_LAPACK)
     add_definitions(-DUSE_BUILTIN_LAPACK)
 endif()
-
-
-include_directories(
-    ${PROJECT_SOURCE_DIR}/src/include
-    ${PROJECT_BINARY_DIR}/modules
-    ${PROJECT_BINARY_DIR}
-    )
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
     ${PROJECT_BINARY_DIR}/lib
@@ -132,22 +123,9 @@ if (CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
     list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "cilkrts")
 endif()
 
-
-set(GENERATED_FILES
-    #${PROJECT_BINARY_DIR}/fortran_interface.h
-    )
-add_custom_target(dirac_interfaces
-    ALL
-    DEPENDS
-    ${GENERATED_FILES}
-)
-
 # set definitions
 #include(Definitions)
 
-if(ENABLE_MATLAB_LOG)
-    add_definitions(-DMOD_MATLAB_LOG)
-endif()
 if(ENABLE_64BIT_INTEGERS)
     add_definitions(-DINT_STAR8)
 endif()
@@ -157,11 +135,31 @@ if(NOT "${CPP}" STREQUAL "")
     add_definitions(${CPP})
 endif()
 
-# add binary_info.F90
-#set(GENERATED_FILES
-#    ${GENERATED_FILES}
-#    ${CMAKE_BINARY_DIR}/binary_info.F90
-#    )
+#include(ConfigGPU)
+if(ENABLE_CUDA)
+    find_package(CUDA)
+    if(CUDA_FOUND)
+      add_definitions(-DUSE_CUBLAS)
+      message("CUDA_INCLUDE_DIRS=${CUDA_INCLUDE_DIRS}")
+      message("CUDA_LIBRARIES=${CUDA_LIBRARIES}")
+    endif()
+endif()
+if(ENABLE_CULA)
+    find_package(CULA)
+    if(CUDA_FOUND)
+      add_definitions(-DUSE_CULA)
+      message("CULA_LIBRARIES=${CULA_LIBRARIES}")
+    endif()
+endif()
+
+include_directories(
+    ${CULA_INCLUDE_DIR}
+    ${CUDA_INCLUDE_DIRS}
+    ${PROJECT_BINARY_DIR}/modules
+    ${PROJECT_BINARY_DIR}
+)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
 
 set(FREE_FORTRAN_SOURCES
     src/fortr_timing.F90
@@ -172,7 +170,6 @@ set(FREE_FORTRAN_SOURCES
 set(C_SOURCES
     src/gpu_routines.c
 )
-
 
 set(GPUCPU_SOURCES
     ${C_SOURCES}
@@ -186,7 +183,13 @@ add_library(
     ${GENERATED_FILES}
     )
 
-include(ConfigGPU)
+add_library(fortran_cuda "${CUDA_TOOLKIT_ROOT_DIR}/src/fortran.c" "${CUDA_TOOLKIT_ROOT_DIR}/src/fortran.h")
+
+add_executable(gpu-cpu-comparison.x  src/main.F90 ${GPUCPU_SOURCES})
+#target_link_libraries(gpu-cpu-comparison.x gpucpu  fortran_cuda   ${CUDA_LIBRARIES}  blas lapack)
+#target_link_libraries(gpu-cpu-comparison.x gpucpu  fortran_cuda ${CUDA_LIBRARIES} ${CULA_LIBRARIES} blas lapack)
+target_link_libraries(gpu-cpu-comparison.x gpucpu  ${CUDA_LIBRARIES} ${CULA_LIBRARIES} blas lapack)
+
 
 include(ConfigTesting)
 #include(ConfigPackaging)

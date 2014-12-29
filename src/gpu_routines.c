@@ -19,8 +19,8 @@
 
 /* cula */
 #include <cula.h>
-#include <culablas.h>
-#include <culapack.h>
+#include <cula_blas.h>
+//#include <cula_pack.h>
 
 /* cblas */
 #if defined HAVE_MKL_BLAS
