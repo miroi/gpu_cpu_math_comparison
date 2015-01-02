@@ -18,9 +18,11 @@
 #include "cuda_runtime_api.h"
 
 /* cula */
+#if defined USE_CULA
 #include <cula.h>
 #include <cula_blas.h>
 //#include <cula_pack.h>
+#endif
 
 /* cblas */
 #if defined HAVE_MKL_BLAS
@@ -268,11 +270,12 @@ void sgemm_cuda_c_test(int *n, int *verbosity){
         //printf("...done\n");
         
         h_C_ref = h_C;
+
+#if defined CBLAS
         //printf("\n\n");
         printf("-------------------\n");
         printf("   CPU CBLAS_SGEMM  \n");
         printf("-------------------\n");
-        
         
         printf("CPU cblas_sgemm running....");
         fflush(stdout);
@@ -287,17 +290,10 @@ void sgemm_cuda_c_test(int *n, int *verbosity){
                  const float beta, float *C, const int ldc);
 */
         cblas_sgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, n3, n3,n3, alpha, h_A, n3, h_B, n3, beta, h_C, n3);
-
         cpu_time_2 = getTime();
-
         printf("...done\n");
-        
-        
-
-        
         //printf("\n\n");
-        
-        
+#endif
         
            printf("-------------------\n");
            printf("   CHECK RESULT SGEMM  \n");
@@ -506,6 +502,9 @@ cublasStatus status;
         } else {if(*verbosity>0)fprintf(stdout,"C mtx obtained from GPU device. \n");}
         
         h_C_ref = h_C;
+
+
+#if defined USE_CBLAS
         //printf("\n\n");
         printf("-------------------\n");
         printf("   CPU CBLAS_SGEMV  \n");
@@ -524,11 +523,10 @@ void cblas_sgemv(const enum CBLAS_ORDER order,
                  float *Y, const int incY);
 */
         cblas_sgemv(CblasRowMajor, CblasNoTrans, n3,n3, alpha, h_A, n3, h_B, 1, beta, h_C, 1);
-
         cpu_time_2 = getTime();
 
         printf("...done\n");
-        
+#endif        
         //printf("\n\n");
            
            printf("-------------------\n");
@@ -588,6 +586,7 @@ void cblas_sgemv(const enum CBLAS_ORDER order,
         }
 }
 
+#if defined USE_CULA
 
 void sgemm_cula_c_test(int *n, int *verbosity){
         
@@ -714,8 +713,6 @@ void sgemm_cula_c_test(int *n, int *verbosity){
         
         // printf("\n\n");
         
-        
-        
            printf("-------------------\n");
            printf("   CHECK RESULT SGEMM  \n");
            printf("-------------------\n");
@@ -762,8 +759,6 @@ void sgemm_cula_c_test(int *n, int *verbosity){
 
         /* Shutdown */
         culaShutdown();
-
-
 }
 
 void sgemv_cula_c_test(int *n, int *verbosity){
@@ -889,8 +884,6 @@ void sgemv_cula_c_test(int *n, int *verbosity){
         
         //printf("\n\n");
         
-        
-        
            printf("-------------------\n");
            printf("   CHECK RESULT SGEMV  \n");
            printf("-------------------\n");
@@ -936,8 +929,6 @@ void sgemv_cula_c_test(int *n, int *verbosity){
 
         /* Shutdown */
         culaShutdown();
-
-
 }
 
 void sgesv_cula_c_test(int *n, int *verbosity){
@@ -1005,14 +996,10 @@ void sgesv_cula_c_test(int *n, int *verbosity){
            newes = fabs(X[i]-B[i]);
            pole = pole + newes;
            if(*verbosity>2) printf("Result check :  i=%d  GPU[%d]=%f  CPU[%d]=%f  Difference :%f \n",i, i+1,X[i],i+1, B[i],newes); 
-     
-      
         }
     
     
-    
     printf("\n\n Average absolute difference :%f \n\n", pole/n3);
-    
     } 
 
     printf("-------------------\n");
@@ -1029,8 +1016,6 @@ void sgesv_cula_c_test(int *n, int *verbosity){
                 fprintf (stderr, "!!!! host memory allocation error (A)\n");
                 exit(EXIT_FAILURE);
         } else {if(*verbosity>0)fprintf(stdout,"A1 mtx allocated \n"); }
-    
-
     
 
     if(*verbosity>0)printf("Allocating Matrix A, vectors B, X and IPIV, size N=%d \n",n3);
@@ -1129,7 +1114,6 @@ void sgesv_cula_c_test(int *n, int *verbosity){
            -1.56f,  4.00f, -8.67f,  1.75f,  2.86f,
             9.81f, -4.09f, -4.57f, -8.61f,  8.99f
            } 
-     
                        */
                        
      printf("Initializing CULA\n");
@@ -1450,8 +1434,6 @@ void sgegrf_cula_c_test(int *n, int *verbosity){
            
         //printf("Results : CPU - Last element of matrix - %f / GPU - Last element of matrix - %f\n\n\n",B[n2-1],A[n2-1]);
         
-        
-        
         printf("Initializing CULA\n");
         status = culaInitialize();
         checkStatus(status);
@@ -1515,7 +1497,7 @@ void sgegrf_cula_c_test(int *n, int *verbosity){
         printf("Time of computation on CPU: %f sekund\n",(cpu_time_2-cpu_time_1)/1000);
         printf("Overall time of computation and transfer on GPU: %f sekund\n\n",(gpu_time_2-gpu_time_1)/1000);
 }
-
+#endif // of USE_CULA
 
 void c_gpu_math_tests_(int *n, char *routine, int *verbosity)
 {
