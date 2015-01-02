@@ -160,6 +160,13 @@ if(ENABLE_CULA)
     endif()
 endif()
 
+
+message("CMAKE_SIZEOF_VOID_P=${CMAKE_SIZEOF_VOID_P}")
+if(${CMAKE_SIZEOF_VOID_P} MATCHES "8")
+  message("64 bit architecture !")
+  add_definitions(-DARCH_64)
+endif()
+
 include_directories(
     ${CULA_INCLUDE_DIR}
     ${CUDA_INCLUDE_DIRS}
