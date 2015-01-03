@@ -18,15 +18,17 @@ Program GPU_math_tests
   use gpu_stuff
   use fortran_timing
 
-  call fortran_compiler_info
-  call c_compiler_info
-
-  call CudaAbouts
-  call CulaAbouts
-
-  call print_time_info
-
+  ! read input parameters from the command line
   call read_arguments
+
+  if (verb.ge.2) then
+    call print_time_info
+    call fortran_compiler_info
+    call c_compiler_info
+    call CudaAbouts
+    call CulaAbouts
+  endif
+
   select case (method)
     case("sgemm_cuda")
       call sgemm_cuda_test

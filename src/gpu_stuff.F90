@@ -1128,7 +1128,7 @@ END subroutine check_cula_status
 #endif
 
 subroutine mtx_check(Mtx)
-! simple check of a matrix
+! simple check of the real matrix
 real*4, intent(in) :: Mtx(n,n)
 real*4 ::  diag,offdiag
 diag=0.0e0;offdiag=diag
@@ -1141,7 +1141,7 @@ do j=1,n
   endif
 enddo
 enddo
-write(*,'(1X,A,D12.4,A,D12.4)') & 
+write(*,'(1X,A,D6.2,A,D6.2)') & 
  'aver. sum of diag. elem.:',diag/float(n),' aver.sum of offdiag elem.:',offdiag/(float(n*n)-float(n))
 write(*,'(1X,4(A,D12.4,1X))') '1,1:',Mtx(1,1),'1,n:',Mtx(1,n),'n,1:',Mtx(n,1),'n,n:',Mtx(n,n)
 end subroutine mtx_check
@@ -1170,7 +1170,8 @@ diag=0.0d0
 do i=1,n
   diag = diag + Mtx(i,i)
 enddo
-write(*,*)  'aver. sum of diag:',diag/dfloat(n),'1,1:',Mtx(1,1),'1,n:',Mtx(1,n),'n,1:',Mtx(n,1),'n,n',Mtx(n,n)
+write(*,'(1X,A,D8.2,2X,4(A,D8.2,1X))')  & 
+ 'aver.sum of diag el.:',diag/dfloat(n),'1,1:',Mtx(1,1),'1,n:',Mtx(1,n),'n,1:',Mtx(n,1),'n,n:',Mtx(n,n)
 end subroutine mtx_check_d
 
 end module gpu_stuff
